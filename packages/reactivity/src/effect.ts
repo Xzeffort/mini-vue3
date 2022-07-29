@@ -1,6 +1,6 @@
 export let activeEffect = null;
 
-class ReactiveEffect {
+export class ReactiveEffect {
   public parent = null;
   public active = true; // effect 默认是激活状态
   public deps = []; // 记录该effect被多少属性收集了
@@ -58,6 +58,10 @@ export function track(target, type, key) {
   if (!deps) {
     depsMap.set(key, (deps = new Set()));
   }
+  trackEffects(deps);
+}
+
+export function trackEffects(deps) {
   let shouldTrack = deps.has(activeEffect);
   if (!shouldTrack) {
     deps.add(activeEffect);
@@ -71,22 +75,27 @@ export function trigger(target, type, key, value, oldValue) {
   if (!depsMap) return;
   let effects = depsMap.get(key);
   if (effects) {
-    // 复制一遍，防止死循环
-    // 原因：set 遍历，执行了删除依赖（cleanEffect），后续又进行了添加依赖（this.fn()），导致了死循环
-    effects = [...effects];
-    effects.forEach((effect) => {
-      // 判断当前执行的effect是否是要在effect函数中可能要被重新触发的的依赖，防止重复执行
-      // 例如 effetc 中 进行了赋值操作
-      if (effect !== activeEffect) {
-        if (effect.scheduler) {
-          // 如果存在自定义调度器则调用该调度器
-          effect.scheduler();
-        } else {
-          effect.run();
-        }
-      }
-    });
+    triggerEffects(effects);
   }
+}
+
+export function triggerEffects(effects) {
+  // 复制一遍，防止死循环
+  // 原因：set 遍历，执行了删除依赖（cleanEffect），后续又进行了添加依赖（this.fn()），导致了死循环
+  effects = [...effects];
+  // 存在一个 bug  https://github.com/vuejs/core/issues/5720
+  effects.forEach((effect) => {
+    // 判断当前执行的effect是否是要在effect函数中可能要被重新触发的的依赖，防止重复执行
+    // 例如 effetc 中 进行了赋值操作
+    if (effect !== activeEffect) {
+      if (effect.scheduler) {
+        // 如果存在自定义调度器则调用该调度器
+        effect.scheduler();
+      } else {
+        effect.run();
+      }
+    }
+  });
 }
 
 function cleanEffect(effect) {
