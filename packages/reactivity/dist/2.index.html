@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <body>
+    <div id="app"></div>
+  </body>
+  <script src="./reactivity.global.js"></script>
+  <script>
+    const { effect, reactive } = VueReactivity;
+
+    const data = reactive({
+      name: 'xzy',
+      age: 24,
+      flag: true,
+    });
+    let update = true;
+    let runner = effect(
+      () => {
+        document.getElementById(
+          'app'
+        ).innerHTML = `${data.name} ----${data.age}------ `;
+      },
+      {
+        scheduler() {
+          if (update) {
+            update = false;
+            setTimeout(() => {
+              console.log('render');
+              // runner 其实就是 effect.run
+              runner();
+              update = true;
+            }, 1000);
+          }
+        },
+      }
+    );
+    data.age = 24;
+    data.age = 25;
+    data.age = 26;
+    data.age = 27;
+    data.age = 28;
+  </script>
+</html>

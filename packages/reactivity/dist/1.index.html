@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <body>
+    <div id="app"></div>
+  </body>
+  <script src="./reactivity.global.js"></script>
+  <script>
+    const { effect, reactive } = VueReactivity;
+
+    const data = reactive({
+      name: 'xzy',
+      age: 24,
+      flag: true,
+    });
+
+    let runner = effect(() => {
+      document.getElementById(
+        'app'
+      ).innerHTML = `${data.name} ----${data.age}------ `;
+    });
+    runner.effect.stop();
+    setTimeout(() => {
+      data.name = 'xxxxxx';
+      setTimeout(() => {
+        runner();
+      }, 2000);
+    }, 1000);
+  </script>
+</html>
