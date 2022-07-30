@@ -21,3 +21,8 @@ export function reactive(target: any) {
   reactiveMap.set(target, proxy);
   return proxy;
 }
+
+// 判断是否是响应式对象
+export function isReactive(obj) {
+  return !!(obj && obj[ReactiveFlags.IS_REACTIVE]);
+}

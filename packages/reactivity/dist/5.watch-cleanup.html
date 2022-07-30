@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <body>
+    <div id="app"></div>
+  </body>
+  <script src="./reactivity.global.js"></script>
+  <script>
+    const { effect, reactive, computed, watch } = VueReactivity;
+
+    let i = 2000;
+
+    function getData(timer) {
+      return new Promise((resolve) => {
+        setTimeout(() => {
+          resolve(timer);
+        }, timer);
+      });
+    }
+
+    const data = reactive({
+      name: 'xzy',
+      age: 24,
+    });
+
+    watch(
+      () => data.name,
+      async (newValue, oldValue, onCleanup) => {
+        let flag = true;
+        debugger;
+        onCleanup(() => {
+          flag = false;
+        });
+        i -= 1000;
+        const res = await getData(i);
+        if (flag) document.getElementById('app').innerHTML = `${res}`;
+      }
+    );
+
+    effect(() => {
+      document.getElementById(
+        'app'
+      ).innerHTML = `${data.name} ----- ${data.age}`;
+    });
+
+    data.name = 'jjjj';
+    data.name = 'zzzxx';
+    // setTimeout(() => {
+    //   data.age = 18;
+    // }, 2000);
+  </script>
+</html>

@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <body>
+    <div id="app"></div>
+  </body>
+  <script src="./reactivity.global.js"></script>
+  <script>
+    const { effect, reactive, computed, watch } = VueReactivity;
+
+    const data = reactive({
+      name: 'xzy',
+      age: 24,
+    });
+
+    watch(
+      () => data.name,
+      (newValue, oldValue) => {
+        console.log(newValue, oldValue);
+      }
+    );
+
+    effect(() => {
+      document.getElementById(
+        'app'
+      ).innerHTML = `${data.name} ----- ${data.age}`;
+    });
+
+    setTimeout(() => {
+      data.name = 'jjjj';
+    }, 1000);
+
+    // setTimeout(() => {
+    //   data.age = 18;
+    // }, 2000);
+  </script>
+</html>

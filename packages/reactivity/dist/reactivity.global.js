@@ -23,7 +23,8 @@ var VueReactivity = (() => {
     ReactiveEffect: () => ReactiveEffect,
     computed: () => computed,
     effect: () => effect,
-    reactive: () => reactive
+    reactive: () => reactive,
+    watch: () => watch
   });
 
   // packages/shared/src/index.ts
@@ -205,6 +206,45 @@ var VueReactivity = (() => {
     const proxy = new Proxy(target, mutableHandlers);
     reactiveMap.set(target, proxy);
     return proxy;
+  }
+  function isReactive(obj) {
+    return !!(obj && obj["__v_isReactive" /* IS_REACTIVE */]);
+  }
+
+  // packages/reactivity/src/watch.ts
+  function watch(source, cb) {
+    let getter = null;
+    let oldValue = void 0;
+    if (isReactive(source)) {
+      getter = () => traverse(source);
+    } else if (isFunction) {
+      getter = source;
+    }
+    let cleanup = null;
+    const onCleanup = (cleanupFn) => {
+      cleanup = cleanupFn;
+    };
+    const job = () => {
+      if (cleanup) {
+        cleanup();
+      }
+      const newValue = getter();
+      cb(newValue, oldValue, onCleanup);
+      oldValue = newValue;
+    };
+    const effect2 = new ReactiveEffect(getter, job);
+    oldValue = effect2.run();
+  }
+  function traverse(obj, set = /* @__PURE__ */ new Set()) {
+    if (!isObject(obj))
+      return obj;
+    if (set.has(obj))
+      return obj;
+    set.add(obj);
+    for (const key in obj) {
+      traverse(obj[key], set);
+    }
+    return obj;
   }
   return __toCommonJS(src_exports);
 })();
