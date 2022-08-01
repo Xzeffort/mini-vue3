@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <body>
+    <div id="app"></div>
+  </body>
+  <script src="./reactivity.global.js"></script>
+  <script>
+    const { effect, reactive, ref } = VueReactivity;
+
+    const data = ref({
+      name: 'xzy',
+      age: 24,
+    });
+
+    effect(() => {
+      document.getElementById(
+        'app'
+      ).innerHTML = `${data.value.name} ----- ${data.value.age}`;
+    });
+
+    setTimeout(() => {
+      data.value.name = 456;
+    }, 1000);
+
+    setTimeout(() => {
+      data.value.age = 789;
+    }, 2000);
+  </script>
+</html>

@@ -26,3 +26,7 @@ export function reactive(target: any) {
 export function isReactive(obj) {
   return !!(obj && obj[ReactiveFlags.IS_REACTIVE]);
 }
+
+// 如果是对象转成响应式对象
+export const toReactive = (value) =>
+  isObject(value) ? reactive(value) : value;

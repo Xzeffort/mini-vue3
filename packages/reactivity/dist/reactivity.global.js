@@ -24,6 +24,7 @@ var VueReactivity = (() => {
     computed: () => computed,
     effect: () => effect,
     reactive: () => reactive,
+    ref: () => ref,
     watch: () => watch
   });
 
@@ -90,7 +91,7 @@ var VueReactivity = (() => {
   }
   function trackEffects(deps) {
     let shouldTrack = deps.has(activeEffect);
-    if (!shouldTrack) {
+    if (!shouldTrack && activeEffect) {
       deps.add(activeEffect);
       activeEffect.deps.push(deps);
     }
@@ -210,6 +211,7 @@ var VueReactivity = (() => {
   function isReactive(obj) {
     return !!(obj && obj["__v_isReactive" /* IS_REACTIVE */]);
   }
+  var toReactive = (value) => isObject(value) ? reactive(value) : value;
 
   // packages/reactivity/src/watch.ts
   function watch(source, cb) {
@@ -245,6 +247,36 @@ var VueReactivity = (() => {
       traverse(obj[key], set);
     }
     return obj;
+  }
+
+  // packages/reactivity/src/ref.ts
+  var RefImpl = class {
+    constructor(rawValue) {
+      this.rawValue = rawValue;
+      this.deps = /* @__PURE__ */ new Set();
+      this.__v_isRef = true;
+      this._value = toReactive(rawValue);
+    }
+    get value() {
+      trackEffects(this.deps);
+      return this._value;
+    }
+    set value(newValue) {
+      if (newValue !== this.rawValue) {
+        this.rawValue = newValue;
+        this._value = toReactive(newValue);
+        triggerEffects(this.deps);
+      }
+    }
+  };
+  function ref(value) {
+    if (isRef(value)) {
+      return value;
+    }
+    return new RefImpl(value);
+  }
+  function isRef(r) {
+    return !!(r && r.__v_isRef === true);
   }
   return __toCommonJS(src_exports);
 })();
