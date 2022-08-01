@@ -61,7 +61,8 @@ export function toRefs(obj) {
   return ret;
 }
 
-// 脱ref，模式渲染时候不用加value，就是使用了该方法
+// 脱ref，模板渲染时候不用加value，就是使用了该方法
+// （在setup返回对象的时候，该对象会作为这个函数的参数, 模板也就能实现了脱ref）
 // 这里限制只支持对象类型
 // proxyRefs({Ref(),...,Ref()})
 export function proxyRefs<T extends object>(obj: T) {
