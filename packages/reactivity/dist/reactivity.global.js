@@ -25,6 +25,8 @@ var VueReactivity = (() => {
     effect: () => effect,
     reactive: () => reactive,
     ref: () => ref,
+    toRef: () => toRef,
+    toRefs: () => toRefs,
     watch: () => watch
   });
 
@@ -277,6 +279,30 @@ var VueReactivity = (() => {
   }
   function isRef(r) {
     return !!(r && r.__v_isRef === true);
+  }
+  var ObjectRefImpl = class {
+    constructor(obj, key) {
+      this.obj = obj;
+      this.key = key;
+      this.__v_isRef = true;
+    }
+    get value() {
+      return this.obj[this.key];
+    }
+    set value(newValue) {
+      this.obj[this.key] = newValue;
+    }
+  };
+  function toRef(obj, key) {
+    const val = obj[key];
+    return isRef(val) ? val : new ObjectRefImpl(obj, key);
+  }
+  function toRefs(obj) {
+    const ret = {};
+    for (const key in obj) {
+      ret[key] = toRef(obj, key);
+    }
+    return ret;
   }
   return __toCommonJS(src_exports);
 })();

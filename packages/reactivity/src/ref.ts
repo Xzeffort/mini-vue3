@@ -33,3 +33,30 @@ export function ref(value) {
 export function isRef(r) {
   return !!(r && r.__v_isRef === true);
 }
+
+class ObjectRefImpl {
+  public readonly __v_isRef = true;
+
+  constructor(public obj, public key) {}
+
+  get value() {
+    return this.obj[this.key];
+  }
+
+  set value(newValue) {
+    this.obj[this.key] = newValue;
+  }
+}
+
+export function toRef(obj, key) {
+  const val = obj[key];
+  return isRef(val) ? val : new ObjectRefImpl(obj, key);
+}
+
+export function toRefs(obj) {
+  const ret = {};
+  for (const key in obj) {
+    ret[key] = toRef(obj, key);
+  }
+  return ret;
+}
