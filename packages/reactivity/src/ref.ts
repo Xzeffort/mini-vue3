@@ -1,5 +1,5 @@
 import { trackEffects, triggerEffects } from './effect';
-import { toReactive } from './reactive';
+import { isReactive, toReactive } from './reactive';
 
 class RefImpl {
   private _value;
@@ -59,4 +59,31 @@ export function toRefs(obj) {
     ret[key] = toRef(obj, key);
   }
   return ret;
+}
+
+// 脱ref，模式渲染时候不用加value，就是使用了该方法
+// 这里限制只支持对象类型
+// proxyRefs({Ref(),...,Ref()})
+export function proxyRefs<T extends object>(obj: T) {
+  return isReactive(obj)
+    ? obj
+    : new Proxy(obj, {
+        get(target, key, receiver) {
+          return unref(Reflect.get(target, key, receiver));
+        },
+        set(target, key, newValue, receiver) {
+          const oldValue = target[key];
+          // 老值为ref，并且新值不为ref时候，说明是对老值ref的value赋值。
+          if (isRef(oldValue) && !isRef(newValue)) {
+            oldValue.value = newValue;
+            return true;
+          } else {
+            return Reflect.set(target, key, newValue, receiver);
+          }
+        },
+      });
+}
+
+export function unref(ref) {
+  return isRef(ref) ? ref.value : ref;
 }
