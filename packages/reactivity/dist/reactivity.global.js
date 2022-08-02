@@ -23,11 +23,20 @@ var VueReactivity = (() => {
     ReactiveEffect: () => ReactiveEffect,
     computed: () => computed,
     effect: () => effect,
+    isProxy: () => isProxy,
+    isReactive: () => isReactive,
+    isReadonly: () => isReadonly,
+    isRef: () => isRef,
     proxyRefs: () => proxyRefs,
     reactive: () => reactive,
+    readonly: () => readonly,
     ref: () => ref,
+    shallowReadonly: () => shallowReadonly,
+    toReactive: () => toReactive,
+    toReadonly: () => toReadonly,
     toRef: () => toRef,
     toRefs: () => toRefs,
+    unref: () => unref,
     watch: () => watch
   });
 
@@ -172,49 +181,86 @@ var VueReactivity = (() => {
     }
   };
 
-  // packages/reactivity/src/baseHandler.ts
-  var mutableHandlers = {
-    get(target, key, receiver) {
+  // packages/reactivity/src/baseHandlers.ts
+  var get = createGetter();
+  var readonlyGet = createGetter(true);
+  var set = createSetter();
+  function createGetter(isReadonly2 = false) {
+    return function(target, key, receiver) {
       if (key === "__v_isReactive" /* IS_REACTIVE */) {
-        return true;
+        return !isReadonly2;
+      } else if (key === "__v_isReadonly" /* IS_READONLY */) {
+        return isReadonly2;
       }
-      track(target, "get", key);
       let res = Reflect.get(target, key, receiver);
+      if (!isReadonly2) {
+        track(target, "get", key);
+      }
       if (isObject(res)) {
-        res = reactive(res);
+        res = isReadonly2 ? readonly(res) : reactive(res);
       }
       return res;
-    },
-    set(target, key, value, receiver) {
+    };
+  }
+  function createSetter() {
+    return function(target, key, value, receiver) {
       let oldValue = target[key];
       let result = Reflect.set(target, key, value, receiver);
       if (oldValue !== value) {
         trigger(target, "set", key, value, oldValue);
       }
       return result;
+    };
+  }
+  var mutableHandlers = {
+    get,
+    set
+  };
+  var readonlyHandlers = {
+    get: readonlyGet,
+    set(target, key) {
+      console.warn(`Set operation on key "${String(key)}" failed: target is readonly.`, target);
+      return true;
     }
   };
 
   // packages/reactivity/src/reactive.ts
   var reactiveMap = /* @__PURE__ */ new WeakMap();
+  var readonlyMap = /* @__PURE__ */ new WeakMap();
   function reactive(target) {
+    return createReactiveObject(target, false, mutableHandlers, reactiveMap);
+  }
+  function readonly(target) {
+    return createReactiveObject(target, true, readonlyHandlers, readonlyMap);
+  }
+  function shallowReadonly(target) {
+  }
+  function createReactiveObject(target, isReadonly2, baseHandlers, proxyMap) {
     if (!isObject(target)) {
+      console.warn(`value cannot be made reactive: ${String(target)}`);
       return;
     }
-    if (target["__v_isReactive" /* IS_REACTIVE */]) {
+    if (!isReadonly2 && target["__v_isReactive" /* IS_REACTIVE */]) {
       return target;
     }
-    if (reactiveMap.has(target)) {
-      return reactiveMap.get(target);
+    if (proxyMap.has(target)) {
+      return proxyMap.get(target);
     }
-    const proxy = new Proxy(target, mutableHandlers);
-    reactiveMap.set(target, proxy);
+    const proxy = new Proxy(target, baseHandlers);
+    proxyMap.set(target, proxy);
     return proxy;
   }
-  function isReactive(obj) {
-    return !!(obj && obj["__v_isReactive" /* IS_REACTIVE */]);
+  function isReactive(value) {
+    return !!(value && value["__v_isReactive" /* IS_REACTIVE */]);
+  }
+  function isReadonly(value) {
+    return !!(value && value["__v_isReadonly" /* IS_READONLY */]);
   }
   var toReactive = (value) => isObject(value) ? reactive(value) : value;
+  var toReadonly = (value) => isObject(value) ? readonly(value) : value;
+  function isProxy(value) {
+    return isReactive(value) || isReadonly(value);
+  }
 
   // packages/reactivity/src/watch.ts
   function watch(source, cb) {
@@ -240,14 +286,14 @@ var VueReactivity = (() => {
     const effect2 = new ReactiveEffect(getter, job);
     oldValue = effect2.run();
   }
-  function traverse(obj, set = /* @__PURE__ */ new Set()) {
+  function traverse(obj, set2 = /* @__PURE__ */ new Set()) {
     if (!isObject(obj))
       return obj;
-    if (set.has(obj))
+    if (set2.has(obj))
       return obj;
-    set.add(obj);
+    set2.add(obj);
     for (const key in obj) {
-      traverse(obj[key], set);
+      traverse(obj[key], set2);
     }
     return obj;
   }
