@@ -6,9 +6,8 @@ import {
 } from './baseHandlers';
 
 // 引入 reactiveMap等 主要是为了是获取已经被代理过的对象，不需要重复代理。
-const reactiveMap = new WeakMap();
-const readonlyMap = new WeakMap();
-const shallowReadonlyMap = new WeakMap();
+export const reactiveMap = new WeakMap();
+export const readonlyMap = new WeakMap();
 
 export function reactive(target: any) {
   return createReactiveObject(target, false, mutableHandlers, reactiveMap);
@@ -17,8 +16,6 @@ export function reactive(target: any) {
 export function readonly(target) {
   return createReactiveObject(target, true, readonlyHandlers, readonlyMap);
 }
-
-export function shallowReadonly(target) {}
 
 function createReactiveObject(target, isReadonly, baseHandlers, proxyMap) {
   if (!isObject(target)) {
@@ -64,4 +61,12 @@ export const toReadonly = (value: unknown) =>
 // 判断对象是否被代理
 export function isProxy(value: unknown): boolean {
   return isReactive(value) || isReadonly(value);
+}
+
+export function toRaw(value: unknown) {
+  const raw = value && value[ReactiveFlags.RAW];
+  // 为什么需要再次递归，例如
+  // const data = reactive(obj); const x = readonly(data); console.log(toRaw(x) === obj);
+  // toRaw(x) 第一次得到的值为 data，再次递归才能得到 obj
+  return raw ? toRaw(raw) : value;
 }

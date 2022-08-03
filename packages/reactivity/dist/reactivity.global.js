@@ -29,9 +29,11 @@ var VueReactivity = (() => {
     isRef: () => isRef,
     proxyRefs: () => proxyRefs,
     reactive: () => reactive,
+    reactiveMap: () => reactiveMap,
     readonly: () => readonly,
+    readonlyMap: () => readonlyMap,
     ref: () => ref,
-    shallowReadonly: () => shallowReadonly,
+    toRaw: () => toRaw,
     toReactive: () => toReactive,
     toReadonly: () => toReadonly,
     toRef: () => toRef,
@@ -191,6 +193,8 @@ var VueReactivity = (() => {
         return !isReadonly2;
       } else if (key === "__v_isReadonly" /* IS_READONLY */) {
         return isReadonly2;
+      } else if (key === "__v_raw" /* RAW */ && receiver === (isReadonly2 ? readonlyMap : reactiveMap).get(target)) {
+        return target;
       }
       let res = Reflect.get(target, key, receiver);
       if (!isReadonly2) {
@@ -233,8 +237,6 @@ var VueReactivity = (() => {
   function readonly(target) {
     return createReactiveObject(target, true, readonlyHandlers, readonlyMap);
   }
-  function shallowReadonly(target) {
-  }
   function createReactiveObject(target, isReadonly2, baseHandlers, proxyMap) {
     if (!isObject(target)) {
       console.warn(`value cannot be made reactive: ${String(target)}`);
@@ -260,6 +262,10 @@ var VueReactivity = (() => {
   var toReadonly = (value) => isObject(value) ? readonly(value) : value;
   function isProxy(value) {
     return isReactive(value) || isReadonly(value);
+  }
+  function toRaw(value) {
+    const raw = value && value["__v_raw" /* RAW */];
+    return raw ? toRaw(raw) : value;
   }
 
   // packages/reactivity/src/watch.ts
