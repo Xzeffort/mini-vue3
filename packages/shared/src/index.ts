@@ -1,3 +1,5 @@
+export * from './shapeFlags';
+
 export const isObject = (value: any) => {
   return typeof value === 'object' && value !== null;
 };
@@ -5,6 +7,8 @@ export const isObject = (value: any) => {
 export const isFunction = (value: any) => {
   return typeof value === 'function';
 };
+
+export const isString = (value) => typeof value === 'string';
 
 export const isArray = Array.isArray;
 
