@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <script src="./runtime-dom.global.js"></script>
+  <body>
+    <div id="app"></div>
+  </body>
+  <script>
+    let { h, render, createRenderer, Text } = VueRuntimeDOM;
+    // 数组 ==> 文本
+    // render(
+    //   h('div', { style: { color: 'red' } }, ['hello', 'world']),
+    //   document.getElementById('app')
+    // );
+
+    // setTimeout(() => {
+    //   render(
+    //     h('div', { style: { color: 'blue' } }, 'hello'),
+    //     document.getElementById('app')
+    //   );
+    // }, 1000);
+
+    //  文本 ==> 数组
+    // render(
+    //   h('div', { style: { color: 'blue' } }, 'hello'),
+    //   document.getElementById('app')
+    // );
+
+    // setTimeout(() => {
+    //   render(
+    //     h('div', { style: { color: 'blue' } }, [
+    //       h('span', { style: { color: 'red' } }, 'world'),
+    //       h('span', { style: { color: 'red' } }, 'hello'),
+    //     ]),
+    //     document.getElementById('app')
+    //   );
+    // }, 1000);
+
+    //  空 ==> 文本  空 ==> 数组
+    render(
+      h('div', { style: { color: 'blue' } }, ''),
+      document.getElementById('app')
+    );
+
+    setTimeout(() => {
+      render(
+        h('div', { style: { color: 'blue' } }, 'xxxx'),
+        document.getElementById('app')
+      );
+    }, 1000);
+
+    setTimeout(() => {
+      render(
+        h('div', { style: { color: 'blue' } }, [
+          h('span', { style: { color: 'red' } }, 'world'),
+          h('span', { style: { color: 'red' } }, 'hello'),
+        ]),
+        document.getElementById('app')
+      );
+    }, 1000);
+  </script>
+</html>

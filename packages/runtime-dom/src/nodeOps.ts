@@ -31,6 +31,9 @@ export const nodeOps = {
     return doc.createElement(tagName);
   },
 
+  // nodeValue 和 textContent 的区别 https://juejin.cn/post/7055902273519484942
+  // 简单来说 nodeValue 是只能由文本节点获取的值 textContent则包含了所有的文本内容
+
   setText: (node, text) => {
     node.nodeValue = text;
   },
