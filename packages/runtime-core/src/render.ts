@@ -166,7 +166,7 @@ export function createRenderer(renderOptions) {
     }
   };
 
-  const patchKeyedChildren = (c1, c2, container) => {
+  const patchKeyedChildren = (c1, c2, container, parentAnchor = null) => {
     let i = 0;
     const l2 = c2.length;
     let e1 = c1.length - 1;
@@ -213,7 +213,7 @@ export function createRenderer(renderOptions) {
       // nextPos 取参照物，
       // 例如 abc ==> dxabc 此时 i=0 e1=-1 e2=1,取 a 为 anchor（参照物）进行插入
       const nextPos = e2 + 1;
-      const anchor = nextPos < l2 ? c2[nextPos].el : null;
+      const anchor = nextPos < l2 ? c2[nextPos].el : parentAnchor;
       if (i <= e2) {
         while (i <= e2) {
           patch(null, (c2[i] = normalizeVNode(c2[i])), container, anchor);
@@ -239,6 +239,59 @@ export function createRenderer(renderOptions) {
     //  i > e2 的情况下，如果 i <= e1 有删除的节点
 
     //  接下来 乱序比较
+    // 5. unknown sequence
+    // [i ... e1 + 1]: a b [c d e] f g
+    // [i ... e2 + 1]: a b [e d c h] f g
+    // i = 2, e1 = 4, e2 = 5
+
+    let s1 = i;
+    let s2 = i;
+    const keyToNewIndexMap = new Map();
+    // {'e' => 2, 'd' => 3, 'c' => 4, 'h' => 5}
+    for (i = s2; i <= e2; i++) {
+      const nextChild = (c2[i] = normalizeVNode(c2[i]));
+      if (nextChild.key != null) {
+        keyToNewIndexMap.set(nextChild.key, i);
+      }
+    }
+
+    // 需要更新的节点个数
+    const toBePatched = e2 - s2 + 1;
+    // 记录节点中谁被 patch 过，并且记录原来老的位置在哪，特殊情况：如果为 value为 0 说明是新增节点
+    const newIndexToOldIndexMap = new Array(toBePatched);
+    for (i = 0; i < toBePatched; i++) newIndexToOldIndexMap[i] = 0;
+
+    // 5.2 loop through old children left to be patched and try to patch
+    // matching nodes & remove nodes that are no longer present
+    // patch老节点 和 删除老节点
+    for (i = s1; i <= e1; i++) {
+      const oldChild = c1[i];
+      // 获取节点现在的新位置
+      const newIndex = keyToNewIndexMap.get(oldChild.key);
+      if (newIndex === undefined) {
+        unmount(oldChild);
+      } else {
+        newIndexToOldIndexMap[newIndex - s2] = i + 1;
+        patch(oldChild, c2[newIndex], container, parentAnchor);
+      }
+    }
+
+    // 5.3 move and mount
+    // generate longest stable subsequence only when nodes have moved
+    // 移动位置
+    for (let i = toBePatched - 1; i >= 0; i--) {
+      const index = s2 + i;
+      const current = c2[index];
+      const anchor = index + 1 < l2 ? c2[index + 1].el : parentAnchor;
+
+      // 新增节点
+      if (newIndexToOldIndexMap[i] === 0) {
+        //  newIndexToOldIndexMap ==> [5, 4, 3, 0]
+        patch(null, current, container, anchor);
+      } else {
+        hostInsert(current.el, container, anchor);
+      }
+    }
   };
 
   // 卸载所有孩子

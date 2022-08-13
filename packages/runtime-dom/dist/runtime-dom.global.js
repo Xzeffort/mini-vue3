@@ -203,7 +203,7 @@ var VueRuntimeDOM = (() => {
         }
       }
     };
-    const patchKeyedChildren = (c1, c2, container) => {
+    const patchKeyedChildren = (c1, c2, container, parentAnchor = null) => {
       let i = 0;
       const l2 = c2.length;
       let e1 = c1.length - 1;
@@ -231,7 +231,7 @@ var VueRuntimeDOM = (() => {
       }
       if (i > e1) {
         const nextPos = e2 + 1;
-        const anchor = nextPos < l2 ? c2[nextPos].el : null;
+        const anchor = nextPos < l2 ? c2[nextPos].el : parentAnchor;
         if (i <= e2) {
           while (i <= e2) {
             patch(null, c2[i] = normalizeVNode(c2[i]), container, anchor);
@@ -242,6 +242,39 @@ var VueRuntimeDOM = (() => {
         while (i <= e1) {
           unmount(c1[i]);
           i++;
+        }
+      }
+      let s1 = i;
+      let s2 = i;
+      const keyToNewIndexMap = /* @__PURE__ */ new Map();
+      for (i = s2; i <= e2; i++) {
+        const nextChild = c2[i] = normalizeVNode(c2[i]);
+        if (nextChild.key != null) {
+          keyToNewIndexMap.set(nextChild.key, i);
+        }
+      }
+      const toBePatched = e2 - s2 + 1;
+      const newIndexToOldIndexMap = new Array(toBePatched);
+      for (i = 0; i < toBePatched; i++)
+        newIndexToOldIndexMap[i] = 0;
+      for (i = s1; i <= e1; i++) {
+        const oldChild = c1[i];
+        const newIndex = keyToNewIndexMap.get(oldChild.key);
+        if (newIndex === void 0) {
+          unmount(oldChild);
+        } else {
+          newIndexToOldIndexMap[newIndex - s2] = i + 1;
+          patch(oldChild, c2[newIndex], container, parentAnchor);
+        }
+      }
+      for (let i2 = toBePatched - 1; i2 >= 0; i2--) {
+        const index = s2 + i2;
+        const current = c2[index];
+        const anchor = index + 1 < l2 ? c2[index + 1].el : parentAnchor;
+        if (newIndexToOldIndexMap[i2] === 0) {
+          patch(null, current, container, anchor);
+        } else {
+          hostInsert(current.el, container, anchor);
         }
       }
     };
