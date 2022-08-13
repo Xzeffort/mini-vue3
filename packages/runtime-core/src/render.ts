@@ -14,16 +14,16 @@ export function createRenderer(renderOptions) {
     nextSibling: hostNextSibling,
   } = renderOptions;
 
-  const mountChildren = (children, container) => {
+  const mountChildren = (children, container, anchor) => {
     for (let index = 0; index < children.length; index++) {
       // https://github.com/vuejs/core/blob/main/packages/runtime-core/src/vnode.ts normalizeVNode
       // normalizeVNode 对文本类型特殊处理，同时如果 children[index] 不是VNode类型 让 children[index] 变成 VNode 类型
       const element = (children[index] = normalizeVNode(children[index]));
-      patch(null, element, container);
+      patch(null, element, container, anchor);
     }
   };
 
-  const mountElement = (vnode, container) => {
+  const mountElement = (vnode, container, anchor) => {
     const { type, props, children, shapeFlag } = vnode;
     let el = (vnode.el = hostCreateElement(type));
     if (props) {
@@ -34,9 +34,9 @@ export function createRenderer(renderOptions) {
     if (shapeFlag & ShapeFlags.TEXT_CHILDREN) {
       hostSetElementText(el, children);
     } else if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
-      mountChildren(children, el);
+      mountChildren(children, el, null);
     }
-    hostInsert(el, container);
+    hostInsert(el, container, anchor);
   };
 
   const patch = (n1, n2, container, anchor = null) => {
@@ -59,6 +59,7 @@ export function createRenderer(renderOptions) {
         }
     }
   };
+
   const render = (vnode, container) => {
     if (vnode === null) {
       // 卸载操作(前提已经渲染过)
@@ -89,7 +90,8 @@ export function createRenderer(renderOptions) {
 
   const processElement = (n1, n2, container, anchor) => {
     if (n1 === null) {
-      mountElement(n2, container);
+      // 挂载操作
+      mountElement(n2, container, anchor);
     } else {
       // 更新操作
       patchElement(n1, n2, container, anchor);
@@ -112,20 +114,20 @@ export function createRenderer(renderOptions) {
     hostRemove(vnode.el);
   };
 
-  const patchProps = (oldProps, newProps, el) => {
+  const patchProps = (oldProps, newProps, container) => {
     // 添加新值以及更新老值
     for (const key in newProps) {
-      hostPatchProp(el, key, oldProps[key], newProps[key]);
+      hostPatchProp(container, key, oldProps[key], newProps[key]);
     }
     // 删除不存在的老值
     for (const key in oldProps) {
       if (!newProps[key]) {
-        hostPatchProp(el, key, oldProps[key], null);
+        hostPatchProp(container, key, oldProps[key], null);
       }
     }
   };
 
-  const patchChildren = (n1, n2, el) => {
+  const patchChildren = (n1, n2, container, anchor = null) => {
     const c1 = n1.children;
     const c2 = n2.children;
 
@@ -139,13 +141,14 @@ export function createRenderer(renderOptions) {
       }
       // 满足 空 ==> 文本 文本 ==> 文本
       if (c1 !== c2) {
-        hostSetElementText(el, c2);
+        hostSetElementText(container, c2);
       }
     } else {
       //  现在 n2 为数组 或者 空
       if (preShapeFlag & ShapeFlags.ARRAY_CHILDREN) {
         if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
           // diff 算法
+          patchKeyedChildren(c1, c2, container); // 全量比较
         } else {
           //  之前是数组，现在不是数组
           unmountChildren(c1); // 数组 ==> 空 (在现有条件下：之前分支文本已经被判断)
@@ -153,14 +156,89 @@ export function createRenderer(renderOptions) {
       } else {
         if (preShapeFlag & ShapeFlags.TEXT_CHILDREN) {
           // 之前是文本，现在是其他，先清空文本然后在挂载
-          hostSetElementText(el, '');
+          hostSetElementText(container, '');
         }
         // 如果现在是数组，就进行挂载
         if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
-          mountChildren(c2, el);
+          mountChildren(c2, container, anchor);
         }
       }
     }
+  };
+
+  const patchKeyedChildren = (c1, c2, container) => {
+    let i = 0;
+    const l2 = c2.length;
+    let e1 = c1.length - 1;
+    let e2 = l2 - 1;
+
+    // 1. sync from start
+    // (a b) c
+    // (a b) d e
+    while (i <= e1 && i <= e2) {
+      const n1 = c1[i];
+      const n2 = (c2[i] = normalizeVNode(c2[i]));
+      if (isSameVnode(n1, n2)) {
+        patch(n1, n2, container);
+      } else {
+        break;
+      }
+      i++;
+    }
+
+    // 2. sync from end
+    // a (b c)
+    // d e (b c)
+    while (i <= e1 && i <= e2) {
+      const n1 = c1[e1];
+      const n2 = (c2[e2] = normalizeVNode(c2[e2]));
+      if (isSameVnode(n1, n2)) {
+        patch(n1, n2, container);
+      } else {
+        break;
+      }
+      e1--;
+      e2--;
+    }
+
+    // 3. common sequence + mount
+    // (a b)
+    // (a b) c
+    // i = 2, e1 = 1, e2 = 2
+    // (a b)
+    // c (a b)
+    // i = 0, e1 = -1, e2 = 0
+    if (i > e1) {
+      // 存在新增节点
+      // nextPos 取参照物，
+      // 例如 abc ==> dxabc 此时 i=0 e1=-1 e2=1,取 a 为 anchor（参照物）进行插入
+      const nextPos = e2 + 1;
+      const anchor = nextPos < l2 ? c2[nextPos].el : null;
+      if (i <= e2) {
+        while (i <= e2) {
+          patch(null, (c2[i] = normalizeVNode(c2[i])), container, anchor);
+          i++;
+        }
+      }
+    }
+    // 4. common sequence + unmount
+    // (a b) c
+    // (a b)
+    // i = 2, e1 = 2, e2 = 1
+    // a (b c)
+    // (b c)
+    // i = 0, e1 = 0, e2 = -1
+    else if (i > e2) {
+      // 删除节点
+      while (i <= e1) {
+        unmount(c1[i]);
+        i++;
+      }
+    }
+    //  总结下： i > e1 的情况下，如果 i <= e2 有新增节点
+    //  i > e2 的情况下，如果 i <= e1 有删除的节点
+
+    //  接下来 乱序比较
   };
 
   // 卸载所有孩子

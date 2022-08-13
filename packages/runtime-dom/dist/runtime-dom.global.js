@@ -88,13 +88,13 @@ var VueRuntimeDOM = (() => {
       parentNode: hostParentNode,
       nextSibling: hostNextSibling
     } = renderOptions;
-    const mountChildren = (children, container) => {
+    const mountChildren = (children, container, anchor) => {
       for (let index = 0; index < children.length; index++) {
         const element = children[index] = normalizeVNode(children[index]);
-        patch(null, element, container);
+        patch(null, element, container, anchor);
       }
     };
-    const mountElement = (vnode, container) => {
+    const mountElement = (vnode, container, anchor) => {
       const { type, props, children, shapeFlag } = vnode;
       let el = vnode.el = hostCreateElement(type);
       if (props) {
@@ -105,9 +105,9 @@ var VueRuntimeDOM = (() => {
       if (shapeFlag & 8 /* TEXT_CHILDREN */) {
         hostSetElementText(el, children);
       } else if (shapeFlag & 16 /* ARRAY_CHILDREN */) {
-        mountChildren(children, el);
+        mountChildren(children, el, null);
       }
-      hostInsert(el, container);
+      hostInsert(el, container, anchor);
     };
     const patch = (n1, n2, container, anchor = null) => {
       if (n1 === n2)
@@ -149,7 +149,7 @@ var VueRuntimeDOM = (() => {
     };
     const processElement = (n1, n2, container, anchor) => {
       if (n1 === null) {
-        mountElement(n2, container);
+        mountElement(n2, container, anchor);
       } else {
         patchElement(n1, n2, container, anchor);
       }
@@ -164,17 +164,17 @@ var VueRuntimeDOM = (() => {
     const unmount = (vnode) => {
       hostRemove(vnode.el);
     };
-    const patchProps = (oldProps, newProps, el) => {
+    const patchProps = (oldProps, newProps, container) => {
       for (const key in newProps) {
-        hostPatchProp(el, key, oldProps[key], newProps[key]);
+        hostPatchProp(container, key, oldProps[key], newProps[key]);
       }
       for (const key in oldProps) {
         if (!newProps[key]) {
-          hostPatchProp(el, key, oldProps[key], null);
+          hostPatchProp(container, key, oldProps[key], null);
         }
       }
     };
-    const patchChildren = (n1, n2, el) => {
+    const patchChildren = (n1, n2, container, anchor = null) => {
       const c1 = n1.children;
       const c2 = n2.children;
       const preShapeFlag = n1.shapeFlag;
@@ -184,21 +184,64 @@ var VueRuntimeDOM = (() => {
           unmountChildren(c1);
         }
         if (c1 !== c2) {
-          hostSetElementText(el, c2);
+          hostSetElementText(container, c2);
         }
       } else {
         if (preShapeFlag & 16 /* ARRAY_CHILDREN */) {
           if (shapeFlag & 16 /* ARRAY_CHILDREN */) {
+            patchKeyedChildren(c1, c2, container);
           } else {
             unmountChildren(c1);
           }
         } else {
           if (preShapeFlag & 8 /* TEXT_CHILDREN */) {
-            hostSetElementText(el, "");
+            hostSetElementText(container, "");
           }
           if (shapeFlag & 16 /* ARRAY_CHILDREN */) {
-            mountChildren(c2, el);
+            mountChildren(c2, container, anchor);
           }
+        }
+      }
+    };
+    const patchKeyedChildren = (c1, c2, container) => {
+      let i = 0;
+      const l2 = c2.length;
+      let e1 = c1.length - 1;
+      let e2 = l2 - 1;
+      while (i <= e1 && i <= e2) {
+        const n1 = c1[i];
+        const n2 = c2[i] = normalizeVNode(c2[i]);
+        if (isSameVnode(n1, n2)) {
+          patch(n1, n2, container);
+        } else {
+          break;
+        }
+        i++;
+      }
+      while (i <= e1 && i <= e2) {
+        const n1 = c1[e1];
+        const n2 = c2[e2] = normalizeVNode(c2[e2]);
+        if (isSameVnode(n1, n2)) {
+          patch(n1, n2, container);
+        } else {
+          break;
+        }
+        e1--;
+        e2--;
+      }
+      if (i > e1) {
+        const nextPos = e2 + 1;
+        const anchor = nextPos < l2 ? c2[nextPos].el : null;
+        if (i <= e2) {
+          while (i <= e2) {
+            patch(null, c2[i] = normalizeVNode(c2[i]), container, anchor);
+            i++;
+          }
+        }
+      } else if (i > e2) {
+        while (i <= e1) {
+          unmount(c1[i]);
+          i++;
         }
       }
     };
