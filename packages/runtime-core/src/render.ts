@@ -279,6 +279,8 @@ export function createRenderer(renderOptions) {
     // 5.3 move and mount
     // generate longest stable subsequence only when nodes have moved
     // 移动位置
+    const increasingNewIndexSequence = getSequence(newIndexToOldIndexMap);
+    let j = increasingNewIndexSequence.length - 1;
     for (let i = toBePatched - 1; i >= 0; i--) {
       const index = s2 + i;
       const current = c2[index];
@@ -289,7 +291,12 @@ export function createRenderer(renderOptions) {
         //  newIndexToOldIndexMap ==> [5, 4, 3, 0]
         patch(null, current, container, anchor);
       } else {
-        hostInsert(current.el, container, anchor);
+        //  根据递增子序列，筛选出需要移动的节点
+        if (j < 0 || i !== increasingNewIndexSequence[j]) {
+          hostInsert(current.el, container, anchor);
+        } else {
+          j--;
+        }
       }
     }
   };
@@ -304,4 +311,52 @@ export function createRenderer(renderOptions) {
   return {
     render,
   };
+}
+
+// https://en.wikipedia.org/wiki/Longest_increasing_subsequence
+function getSequence(arr) {
+  const len = arr.length;
+  const p = Array(len).fill(0); // 记录前驱的数组
+  let start;
+  let end;
+  let middle;
+  const result = [0];
+  let resultLastIndex;
+  for (let index = 0; index < len; index++) {
+    const arrI = arr[index];
+    if (arrI !== 0) {
+      // 忽略 0 因为 0 表示新增节点
+      resultLastIndex = result[result.length - 1];
+      if (arr[resultLastIndex] < arrI) {
+        // 比较最后一项的值，如果当前值比它大，则直接加入到结果集中
+        // 这里拿的是索引
+        result.push(index);
+        p[index] = resultLastIndex;
+        continue;
+      }
+      // 不满足上述条件则，利用 二分查找 去找比当前大的边界值
+      start = 0;
+      end = result.length - 1;
+      while (start < end) {
+        middle = (start + end) >> 1;
+        if (arr[result[middle]] < arrI) {
+          start = middle + 1;
+        } else {
+          end = middle;
+        }
+      }
+      if (arr[result[end]] > arrI) {
+        result[end] = index;
+        p[index] = result[end - 1];
+      }
+    }
+  }
+  let i = result.length - 1;
+  let last = result[i]; // 最后一项肯定是对的
+  while (i >= 0) {
+    result[i] = last;
+    last = p[last];
+    i--;
+  }
+  return result;
 }

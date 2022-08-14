@@ -267,6 +267,8 @@ var VueRuntimeDOM = (() => {
           patch(oldChild, c2[newIndex], container, parentAnchor);
         }
       }
+      const increasingNewIndexSequence = getSequence(newIndexToOldIndexMap);
+      let j = increasingNewIndexSequence.length - 1;
       for (let i2 = toBePatched - 1; i2 >= 0; i2--) {
         const index = s2 + i2;
         const current = c2[index];
@@ -274,7 +276,11 @@ var VueRuntimeDOM = (() => {
         if (newIndexToOldIndexMap[i2] === 0) {
           patch(null, current, container, anchor);
         } else {
-          hostInsert(current.el, container, anchor);
+          if (j < 0 || i2 !== increasingNewIndexSequence[j]) {
+            hostInsert(current.el, container, anchor);
+          } else {
+            j--;
+          }
         }
       }
     };
@@ -286,6 +292,48 @@ var VueRuntimeDOM = (() => {
     return {
       render: render2
     };
+  }
+  function getSequence(arr) {
+    const len = arr.length;
+    const p = Array(len).fill(0);
+    let start;
+    let end;
+    let middle;
+    const result = [0];
+    let resultLastIndex;
+    for (let index = 0; index < len; index++) {
+      const arrI = arr[index];
+      if (arrI !== 0) {
+        resultLastIndex = result[result.length - 1];
+        if (arr[resultLastIndex] < arrI) {
+          result.push(index);
+          p[index] = resultLastIndex;
+          continue;
+        }
+        start = 0;
+        end = result.length - 1;
+        while (start < end) {
+          middle = start + end >> 1;
+          if (arr[result[middle]] < arrI) {
+            start = middle + 1;
+          } else {
+            end = middle;
+          }
+        }
+        if (arr[result[end]] > arrI) {
+          result[end] = index;
+          p[index] = result[end - 1];
+        }
+      }
+    }
+    let i = result.length - 1;
+    let last = result[i];
+    while (i >= 0) {
+      result[i] = last;
+      last = p[last];
+      i--;
+    }
+    return result;
   }
 
   // packages/runtime-core/src/h.ts
