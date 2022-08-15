@@ -1,5 +1,5 @@
 import { ShapeFlags } from '@vue/shared';
-import { isSameVnode, normalizeVNode, Text } from './vnode';
+import { Fragment, isSameVnode, normalizeVNode, Text } from './vnode';
 export function createRenderer(renderOptions) {
   const {
     insert: hostInsert,
@@ -53,6 +53,9 @@ export function createRenderer(renderOptions) {
       case Text:
         processText(n1, n2, container, anchor);
         break;
+      case Fragment:
+        processFragment(n1, n2, container, anchor); // 碎片化节点 vue3 新增
+        break;
       default:
         if (shapeFlag & ShapeFlags.ELEMENT) {
           processElement(n1, n2, container, anchor);
@@ -85,6 +88,14 @@ export function createRenderer(renderOptions) {
       if (n2.children !== n1.children) {
         hostSetText(el, n2.children as string);
       }
+    }
+  };
+
+  const processFragment = (n1, n2, container, anchor) => {
+    if (n1 === null) {
+      mountChildren(n2.children, container, anchor);
+    } else {
+      patchChildren(n1, n2, container, anchor);
     }
   };
 

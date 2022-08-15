@@ -20,6 +20,7 @@ var VueRuntimeDOM = (() => {
   // packages/runtime-dom/src/index.ts
   var src_exports = {};
   __export(src_exports, {
+    Fragment: () => Fragment,
     Text: () => Text,
     createRenderer: () => createRenderer,
     h: () => h,
@@ -38,6 +39,7 @@ var VueRuntimeDOM = (() => {
 
   // packages/runtime-core/src/vnode.ts
   var Text = Symbol("Text");
+  var Fragment = Symbol("Fragment");
   function isVnode(value) {
     return !!(value && value["_v__isVnode"]);
   }
@@ -121,6 +123,9 @@ var VueRuntimeDOM = (() => {
         case Text:
           processText(n1, n2, container, anchor);
           break;
+        case Fragment:
+          processFragment(n1, n2, container, anchor);
+          break;
         default:
           if (shapeFlag & 1 /* ELEMENT */) {
             processElement(n1, n2, container, anchor);
@@ -145,6 +150,13 @@ var VueRuntimeDOM = (() => {
         if (n2.children !== n1.children) {
           hostSetText(el, n2.children);
         }
+      }
+    };
+    const processFragment = (n1, n2, container, anchor) => {
+      if (n1 === null) {
+        mountChildren(n2.children, container, anchor);
+      } else {
+        patchChildren(n1, n2, container, anchor);
       }
     };
     const processElement = (n1, n2, container, anchor) => {
