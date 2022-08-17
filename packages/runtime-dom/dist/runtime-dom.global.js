@@ -119,6 +119,7 @@ var VueRuntimeDOM = (() => {
         n1 = null;
       }
       const { type, shapeFlag } = n2;
+      debugger;
       switch (type) {
         case Text:
           processText(n1, n2, container, anchor);
@@ -255,43 +256,44 @@ var VueRuntimeDOM = (() => {
           unmount(c1[i]);
           i++;
         }
-      }
-      let s1 = i;
-      let s2 = i;
-      const keyToNewIndexMap = /* @__PURE__ */ new Map();
-      for (i = s2; i <= e2; i++) {
-        const nextChild = c2[i] = normalizeVNode(c2[i]);
-        if (nextChild.key != null) {
-          keyToNewIndexMap.set(nextChild.key, i);
+      } else {
+        let s1 = i;
+        let s2 = i;
+        const keyToNewIndexMap = /* @__PURE__ */ new Map();
+        for (i = s2; i <= e2; i++) {
+          const nextChild = c2[i] = normalizeVNode(c2[i]);
+          if (nextChild.key != null) {
+            keyToNewIndexMap.set(nextChild.key, i);
+          }
         }
-      }
-      const toBePatched = e2 - s2 + 1;
-      const newIndexToOldIndexMap = new Array(toBePatched);
-      for (i = 0; i < toBePatched; i++)
-        newIndexToOldIndexMap[i] = 0;
-      for (i = s1; i <= e1; i++) {
-        const oldChild = c1[i];
-        const newIndex = keyToNewIndexMap.get(oldChild.key);
-        if (newIndex === void 0) {
-          unmount(oldChild);
-        } else {
-          newIndexToOldIndexMap[newIndex - s2] = i + 1;
-          patch(oldChild, c2[newIndex], container, parentAnchor);
-        }
-      }
-      const increasingNewIndexSequence = getSequence(newIndexToOldIndexMap);
-      let j = increasingNewIndexSequence.length - 1;
-      for (let i2 = toBePatched - 1; i2 >= 0; i2--) {
-        const index = s2 + i2;
-        const current = c2[index];
-        const anchor = index + 1 < l2 ? c2[index + 1].el : parentAnchor;
-        if (newIndexToOldIndexMap[i2] === 0) {
-          patch(null, current, container, anchor);
-        } else {
-          if (j < 0 || i2 !== increasingNewIndexSequence[j]) {
-            hostInsert(current.el, container, anchor);
+        const toBePatched = e2 - s2 + 1;
+        const newIndexToOldIndexMap = new Array(toBePatched);
+        for (i = 0; i < toBePatched; i++)
+          newIndexToOldIndexMap[i] = 0;
+        for (i = s1; i <= e1; i++) {
+          const oldChild = c1[i];
+          const newIndex = keyToNewIndexMap.get(oldChild.key);
+          if (newIndex === void 0) {
+            unmount(oldChild);
           } else {
-            j--;
+            newIndexToOldIndexMap[newIndex - s2] = i + 1;
+            patch(oldChild, c2[newIndex], container, parentAnchor);
+          }
+        }
+        const increasingNewIndexSequence = getSequence(newIndexToOldIndexMap);
+        let j = increasingNewIndexSequence.length - 1;
+        for (let i2 = toBePatched - 1; i2 >= 0; i2--) {
+          const index = s2 + i2;
+          const current = c2[index];
+          const anchor = index + 1 < l2 ? c2[index + 1].el : parentAnchor;
+          if (newIndexToOldIndexMap[i2] === 0) {
+            patch(null, current, container, anchor);
+          } else {
+            if (j < 0 || i2 !== increasingNewIndexSequence[j]) {
+              hostInsert(current.el, container, anchor);
+            } else {
+              j--;
+            }
           }
         }
       }
