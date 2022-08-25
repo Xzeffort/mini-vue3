@@ -1,4 +1,4 @@
-import { isArray, isString, ShapeFlags } from '@vue/shared';
+import { isArray, isObject, isString, ShapeFlags } from '@vue/shared';
 
 export const Text = Symbol('Text');
 export const Fragment = Symbol('Fragment');
@@ -12,14 +12,20 @@ export function isSameVnode(n1, n2) {
 }
 
 export function normalizeVNode(child) {
-  if (isString(child)) {
+  //  源码这里还有其他类型判断 https://github.com/vuejs/core/blob/main/packages/runtime-core/src/vnode.ts
+  // strings and numbers
+  if (isString(child) || typeof child === 'number') {
     child = createVnode(Text, null, String(child));
   }
   return child;
 }
 
 export function createVnode(type, props, children) {
-  let shapeFlag = isString(type) ? ShapeFlags.ELEMENT : 0;
+  let shapeFlag = isString(type)
+    ? ShapeFlags.ELEMENT
+    : isObject(type)
+    ? ShapeFlags.STATEFUL_COMPONENT
+    : 0;
 
   const vnode = {
     _v__isVnode: true,

@@ -1,4 +1,7 @@
+import { ReactiveEffect } from '@vue/reactivity';
 import { ShapeFlags } from '@vue/shared';
+import { createComponentInstance, setupComponent } from './component';
+import { queueJob } from './scheduler';
 import { Fragment, isSameVnode, normalizeVNode, Text } from './vnode';
 export function createRenderer(renderOptions) {
   const {
@@ -49,7 +52,6 @@ export function createRenderer(renderOptions) {
     }
 
     const { type, shapeFlag } = n2;
-    debugger;
     switch (type) {
       case Text:
         processText(n1, n2, container, anchor);
@@ -60,6 +62,8 @@ export function createRenderer(renderOptions) {
       default:
         if (shapeFlag & ShapeFlags.ELEMENT) {
           processElement(n1, n2, container, anchor);
+        } else if (shapeFlag & ShapeFlags.COMPONENT) {
+          processComponent(n1, n2, container, anchor);
         }
     }
   };
@@ -108,6 +112,47 @@ export function createRenderer(renderOptions) {
       // 更新操作
       patchElement(n1, n2, container, anchor);
     }
+  };
+
+  const processComponent = (n1, n2, container, anchor) => {
+    if (n1 === null) {
+      mountComponent(n2, container, anchor);
+    } else {
+    }
+  };
+
+  const mountComponent = (vnode, container, anchor) => {
+    // 1. 创建组件实例
+    const instance = (vnode.component = createComponentInstance(vnode));
+    // 2. 给实例赋值
+    setupComponent(instance);
+    // 3. 创建一个effect
+    setupRenderEffect(instance, container, anchor);
+  };
+
+  const setupRenderEffect = (instance, container, anchor) => {
+    const { render } = instance;
+    const componentUpdateFn = () => {
+      //  区分是挂载还是更新
+      if (!instance.isMounted) {
+        const subTree = (instance.subTree = render.call(instance.proxy));
+        patch(null, subTree, container, anchor);
+        instance.isMounted = true;
+      } else {
+        // 组件内部更新
+        const subTree = render.call(instance.proxy);
+        patch(instance.subTree, subTree, container, anchor);
+        instance.subTree = subTree;
+      }
+    };
+    //  引入自定义scheduler 使用异步批量更新，避免同步更新
+    const effect = new ReactiveEffect(componentUpdateFn, () =>
+      queueJob(instance.update)
+    );
+
+    // 1. 保存强制更新的逻辑 2. 执行渲染函数
+    const update = (instance.update = effect.run.bind(effect));
+    update();
   };
 
   const patchElement = (n1, n2, container, anchor) => {
@@ -256,8 +301,8 @@ export function createRenderer(renderOptions) {
       // [i ... e2 + 1]: a b [e d c h] f g
       // i = 2, e1 = 4, e2 = 5
 
-      let s1 = i;
-      let s2 = i;
+      const s1 = i;
+      const s2 = i;
       const keyToNewIndexMap = new Map();
       // {'e' => 2, 'd' => 3, 'c' => 4, 'h' => 5}
       for (i = s2; i <= e2; i++) {

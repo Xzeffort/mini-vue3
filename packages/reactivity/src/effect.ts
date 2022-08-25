@@ -4,7 +4,7 @@ export class ReactiveEffect {
   public parent = null;
   public active = true; // effect 默认是激活状态
   public deps = []; // 记录该effect被多少属性收集了
-  constructor(public fn, public scheduler) {}
+  constructor(public fn, public scheduler?) {}
 
   run() {
     if (!this.active) {

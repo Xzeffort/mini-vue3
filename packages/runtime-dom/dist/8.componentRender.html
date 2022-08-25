@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <script src="./runtime-dom.global.js"></script>
+  <body>
+    <div id="app"></div>
+  </body>
+  <script>
+    let { h, render } = VueRuntimeDOM;
+    // stateful 组件
+    const VueComponent = {
+      props: {
+        address: String,
+      },
+      data() {
+        return { name: 'xeffort', age: 18 };
+      },
+      render() {
+        // 不允许直接修改props
+        this.address = 1000;
+        return h(
+          'p',
+          // `${this.name}====${this.age}====${this.address}====${
+          //   (this.$attrs.a, this.$attrs.b)
+          // }`
+          [this.name, this.age, this.address, this.$attrs.a, this.$attrs.b]
+        );
+      },
+    };
+
+    // vue中接收的叫props，未接收的叫attrs
+    render(
+      h(VueComponent, {
+        address: '杭州',
+        a: 'aaaa',
+        b: 'bbb',
+      }),
+      document.getElementById('app')
+    );
+  </script>
+</html>

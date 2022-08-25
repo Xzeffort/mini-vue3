@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <script src="./runtime-dom.global.js"></script>
+  <body>
+    <div id="app"></div>
+  </body>
+  <script>
+    let { h, render } = VueRuntimeDOM;
+
+    const VueComponent = {
+      data() {
+        return { name: 'xeffort', age: 18 };
+      },
+      render() {
+        setTimeout(() => {
+          this.age++;
+          this.age++;
+        }, 1000);
+        return h('p', `${this.name}====${this.age}`);
+      },
+    };
+
+    render(h(VueComponent), document.getElementById('app'));
+  </script>
+</html>
