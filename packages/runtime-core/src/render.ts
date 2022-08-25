@@ -1,6 +1,7 @@
 import { ReactiveEffect } from '@vue/reactivity';
 import { ShapeFlags } from '@vue/shared';
 import { createComponentInstance, setupComponent } from './component';
+import { updateProps } from './componentProps';
 import { queueJob } from './scheduler';
 import { Fragment, isSameVnode, normalizeVNode, Text } from './vnode';
 export function createRenderer(renderOptions) {
@@ -118,7 +119,17 @@ export function createRenderer(renderOptions) {
     if (n1 === null) {
       mountComponent(n2, container, anchor);
     } else {
+      // 组件更新（props变化导致）
+      updateComponent(n1, n2);
     }
+  };
+
+  const updateComponent = (n1, n2) => {
+    // instance上的props是响应式的，更改会触发响应式更新
+    const instance = (n2.component = n1.component);
+    const { props: preProps } = n1;
+    const { props: nextProps } = n2;
+    updateProps(instance, preProps, nextProps);
   };
 
   const mountComponent = (vnode, container, anchor) => {
@@ -146,9 +157,9 @@ export function createRenderer(renderOptions) {
       }
     };
     //  引入自定义scheduler 使用异步批量更新，避免同步更新
-    const effect = new ReactiveEffect(componentUpdateFn, () =>
-      queueJob(instance.update)
-    );
+    const effect = new ReactiveEffect(componentUpdateFn, () => {
+      queueJob(instance.update);
+    });
 
     // 1. 保存强制更新的逻辑 2. 执行渲染函数
     const update = (instance.update = effect.run.bind(effect));

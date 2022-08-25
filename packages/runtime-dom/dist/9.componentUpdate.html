@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <script src="./runtime-dom.global.js"></script>
+  <body>
+    <div id="app"></div>
+  </body>
+  <script>
+    let { h, render, Fragment, Text } = VueRuntimeDOM;
+
+    const OtherVueComponent = {
+      props: {
+        address: String,
+      },
+      render() {
+        return h(Text, this.address);
+      },
+    };
+
+    const VueComponent = {
+      data() {
+        return { flag: false };
+      },
+      render() {
+        return h(Fragment, [
+          h(
+            'button',
+            {
+              onClick: () => {
+                this.flag = !this.flag;
+              },
+            },
+            '切换渲染'
+          ),
+          h(OtherVueComponent, { address: this.flag ? 'wenz' : 'hangz' }),
+        ]);
+      },
+    };
+
+    render(
+      h(VueComponent, {
+        address: '杭州',
+        a: 'aaaa',
+        b: 'bbb',
+      }),
+      document.getElementById('app')
+    );
+  </script>
+</html>

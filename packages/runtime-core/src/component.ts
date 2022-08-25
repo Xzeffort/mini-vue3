@@ -3,7 +3,6 @@ import { hasOwn, isFunction } from '@vue/shared';
 import { initProps } from './componentProps';
 
 export function createComponentInstance(vnode) {
-  console.log(vnode);
   const instance: any = {
     data: null,
     vnode,
@@ -64,7 +63,7 @@ export function setupComponent(instance) {
     }
     // 给data绑定this，因为有可能利用this访问一些属性
     instance.data = reactive(data.call(instance.proxy));
-    // 绑定render函数在组件实例上
-    instance.render = type.render;
   }
+  // 绑定render函数在组件实例上
+  instance.render = type.render;
 }

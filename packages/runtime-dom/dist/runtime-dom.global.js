@@ -250,10 +250,34 @@ var VueRuntimeDOM = (() => {
     instance.props = reactive(props);
     instance.attrs = attrs;
   }
+  function updateProps(instance, preProps, nextProps) {
+    if (hasPropsChanged(preProps, nextProps)) {
+      for (const key in nextProps) {
+        instance.props[key] = nextProps[key];
+      }
+      for (const key in instance.props) {
+        if (!hasOwn(nextProps, key)) {
+          delete instance.props[key];
+        }
+      }
+    }
+  }
+  function hasPropsChanged(preProps = {}, nextProps = {}) {
+    const nextKeys = Object.keys(nextProps);
+    if (nextKeys.length !== Object.keys(preProps).length) {
+      return true;
+    }
+    for (let i = 0; i < nextKeys.length; i++) {
+      const key = nextKeys[i];
+      if (preProps[key] !== nextProps[key]) {
+        return true;
+      }
+    }
+    return false;
+  }
 
   // packages/runtime-core/src/component.ts
   function createComponentInstance(vnode) {
-    console.log(vnode);
     const instance = {
       data: null,
       vnode,
@@ -307,8 +331,8 @@ var VueRuntimeDOM = (() => {
         return;
       }
       instance.data = reactive(data.call(instance.proxy));
-      instance.render = type.render;
     }
+    instance.render = type.render;
   }
 
   // packages/runtime-core/src/scheduler.ts
@@ -430,7 +454,14 @@ var VueRuntimeDOM = (() => {
       if (n1 === null) {
         mountComponent(n2, container, anchor);
       } else {
+        updateComponent(n1, n2);
       }
+    };
+    const updateComponent = (n1, n2) => {
+      const instance = n2.component = n1.component;
+      const { props: preProps } = n1;
+      const { props: nextProps } = n2;
+      updateProps(instance, preProps, nextProps);
     };
     const mountComponent = (vnode, container, anchor) => {
       const instance = vnode.component = createComponentInstance(vnode);
@@ -450,7 +481,9 @@ var VueRuntimeDOM = (() => {
           instance.subTree = subTree;
         }
       };
-      const effect2 = new ReactiveEffect(componentUpdateFn, () => queueJob(instance.update));
+      const effect2 = new ReactiveEffect(componentUpdateFn, () => {
+        queueJob(instance.update);
+      });
       const update = instance.update = effect2.run.bind(effect2);
       update();
     };
