@@ -1,5 +1,5 @@
 import { proxyRefs, reactive } from '@vue/reactivity';
-import { hasOwn, isFunction, isObject } from '@vue/shared';
+import { hasOwn, isFunction, isObject, ShapeFlags } from '@vue/shared';
 import { initProps } from './componentProps';
 
 export function createComponentInstance(vnode) {
@@ -14,13 +14,15 @@ export function createComponentInstance(vnode) {
     attrs: {}, // 除所有props选项外的props，被认定为attrs
     proxy: null,
     render: null,
-    setupState: {},
+    setupState: {}, //setup返回的数据
+    slots: {}, // 插槽相关内容
   };
   return instance;
 }
 
 const publicPropertyMap = {
   $attrs: (i) => i.attrs,
+  $slots: (i) => i.slots,
 };
 
 const publicInstanceProxy = {
@@ -55,10 +57,17 @@ const publicInstanceProxy = {
   },
 };
 
+function initSlots(instance, children) {
+  if (instance.vnode.shapeFlag & ShapeFlags.SLOTS_CHILDREN) {
+    instance.slots = children;
+  }
+}
+
 export function setupComponent(instance) {
-  const { props, type } = instance.vnode;
+  const { props, type, children } = instance.vnode;
   // 初始化props和attrs
   initProps(instance, props);
+  initSlots(instance, children);
   // 建立proxy，为了让render函数能够间接访问data等数据
   instance.proxy = new Proxy(instance, publicInstanceProxy);
   const data = type.data;
@@ -72,7 +81,17 @@ export function setupComponent(instance) {
   }
   const setup = type.setup;
   if (setup) {
-    const setupContext = {};
+    const setupContext = {
+      emit: (event, ...args) => {
+        const eventName = `on${event[0].toUpperCase() + event.slice(1)}`;
+        // 获取vnode上的props 对应的事件
+        const handler = instance.vnode.props[eventName];
+        handler && handler(...args);
+      },
+      attrs: instance.attrs,
+      slots: instance.slots,
+      expose: () => {}, // todo 暴露内部方法使用的
+    };
     const setupResult = setup(instance.props, setupContext);
     if (isFunction(setupResult)) {
       // 注意： setup 如果返回函数则是render函数

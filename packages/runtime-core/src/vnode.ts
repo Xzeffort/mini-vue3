@@ -41,6 +41,9 @@ export function createVnode(type, props, children) {
     let type = 0;
     if (isArray(children)) {
       type = ShapeFlags.ARRAY_CHILDREN;
+    } else if (isObject(children)) {
+      // 插槽
+      type = ShapeFlags.SLOTS_CHILDREN;
     } else {
       vnode.children = String(children);
       type = ShapeFlags.TEXT_CHILDREN;

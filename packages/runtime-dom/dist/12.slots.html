@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <script src="./runtime-dom.global.js"></script>
+  <body>
+    <div id="app"></div>
+  </body>
+  <script>
+    const { h, render, Fragment } = VueRuntimeDOM;
+
+    const OtherComponent = {
+      render() {
+        return h(Fragment, [
+          h('div', this.$slots.header()),
+          h('div', this.$slots.main()),
+          h('div', this.$slots.footer()),
+        ]);
+      },
+    };
+
+    const VueComponent = {
+      render() {
+        // 注意第二个值必须为null，同时插槽是一个对象类型，是一种映射关系
+        return h(OtherComponent, null, {
+          header: () => h('p', 'header'),
+          main: () => h('h1', 'Main'),
+          footer: () => h('p', 'footer'),
+        });
+      },
+    };
+
+    render(h(VueComponent), document.getElementById('app'));
+  </script>
+</html>
