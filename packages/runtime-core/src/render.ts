@@ -1,7 +1,7 @@
 import { ReactiveEffect } from '@vue/reactivity';
 import { ShapeFlags } from '@vue/shared';
 import { createComponentInstance, setupComponent } from './component';
-import { updateProps } from './componentProps';
+import { hasPropsChanged, updateProps } from './componentProps';
 import { queueJob } from './scheduler';
 import { Fragment, isSameVnode, normalizeVNode, Text } from './vnode';
 export function createRenderer(renderOptions) {
@@ -124,12 +124,33 @@ export function createRenderer(renderOptions) {
     }
   };
 
+  // 统一更新的入口
+  const shouldUpdateComponent = (n1, n2) => {
+    const { props: preProps } = n1;
+    const { props: nextProps } = n2;
+    if (preProps === nextProps) return false;
+    return hasPropsChanged(preProps, nextProps);
+  };
+
   const updateComponent = (n1, n2) => {
     // instance上的props是响应式的，更改会触发响应式更新
     const instance = (n2.component = n1.component);
-    const { props: preProps } = n1;
-    const { props: nextProps } = n2;
-    updateProps(instance, preProps, nextProps);
+    if (shouldUpdateComponent(n1, n2)) {
+      // 将新的虚拟节点放在instance，为了在update中能拿到新的数据
+      instance.next = n2;
+      // 统一调用update的方法来更新
+      instance.update();
+    }
+  };
+
+  const updateComponentPreRender = (instance, nextVNode) => {
+    // 更新 新实例
+    nextVNode.component = instance;
+    // next清空
+    instance.next = null;
+    // 更新实例上的vnode为最新的
+    instance.vnode = nextVNode;
+    updateProps(instance.props, nextVNode.props);
   };
 
   const mountComponent = (vnode, container, anchor) => {
@@ -151,6 +172,10 @@ export function createRenderer(renderOptions) {
         instance.isMounted = true;
       } else {
         // 组件内部更新
+        const { next } = instance;
+        if (next) {
+          updateComponentPreRender(instance, next);
+        }
         const subTree = render.call(instance.proxy);
         patch(instance.subTree, subTree, container, anchor);
         instance.subTree = subTree;

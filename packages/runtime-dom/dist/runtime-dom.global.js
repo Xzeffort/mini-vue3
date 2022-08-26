@@ -250,14 +250,14 @@ var VueRuntimeDOM = (() => {
     instance.props = reactive(props);
     instance.attrs = attrs;
   }
-  function updateProps(instance, preProps, nextProps) {
+  function updateProps(preProps, nextProps) {
     if (hasPropsChanged(preProps, nextProps)) {
       for (const key in nextProps) {
-        instance.props[key] = nextProps[key];
+        preProps[key] = nextProps[key];
       }
-      for (const key in instance.props) {
+      for (const key in nextProps) {
         if (!hasOwn(nextProps, key)) {
-          delete instance.props[key];
+          delete preProps[key];
         }
       }
     }
@@ -457,11 +457,25 @@ var VueRuntimeDOM = (() => {
         updateComponent(n1, n2);
       }
     };
-    const updateComponent = (n1, n2) => {
-      const instance = n2.component = n1.component;
+    const shouldUpdateComponent = (n1, n2) => {
       const { props: preProps } = n1;
       const { props: nextProps } = n2;
-      updateProps(instance, preProps, nextProps);
+      if (preProps === nextProps)
+        return false;
+      return hasPropsChanged(preProps, nextProps);
+    };
+    const updateComponent = (n1, n2) => {
+      const instance = n2.component = n1.component;
+      if (shouldUpdateComponent(n1, n2)) {
+        instance.next = n2;
+        instance.update();
+      }
+    };
+    const updateComponentPreRender = (instance, nextVNode) => {
+      nextVNode.component = instance;
+      instance.next = null;
+      instance.vnode = nextVNode;
+      updateProps(instance.props, nextVNode.props);
     };
     const mountComponent = (vnode, container, anchor) => {
       const instance = vnode.component = createComponentInstance(vnode);
@@ -476,6 +490,10 @@ var VueRuntimeDOM = (() => {
           patch(null, subTree, container, anchor);
           instance.isMounted = true;
         } else {
+          const { next } = instance;
+          if (next) {
+            updateComponentPreRender(instance, next);
+          }
           const subTree = render3.call(instance.proxy);
           patch(instance.subTree, subTree, container, anchor);
           instance.subTree = subTree;

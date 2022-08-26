@@ -23,22 +23,22 @@ export function initProps(instance, rawProps) {
   instance.attrs = attrs;
 }
 
-export function updateProps(instance, preProps, nextProps) {
+export function updateProps(preProps, nextProps) {
   // 考虑到两点：1. 值的变化 2. props的个数变化
   if (hasPropsChanged(preProps, nextProps)) {
     for (const key in nextProps) {
-      instance.props[key] = nextProps[key];
+      preProps[key] = nextProps[key];
     }
     //  删除不存在的属性
-    for (const key in instance.props) {
+    for (const key in nextProps) {
       if (!hasOwn(nextProps, key)) {
-        delete instance.props[key];
+        delete preProps[key];
       }
     }
   }
 }
 
-function hasPropsChanged(preProps = {}, nextProps = {}) {
+export function hasPropsChanged(preProps = {}, nextProps = {}) {
   const nextKeys = Object.keys(nextProps);
   if (nextKeys.length !== Object.keys(preProps).length) {
     return true;
